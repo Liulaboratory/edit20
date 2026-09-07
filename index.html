@@ -329,7 +329,7 @@ async function ghGet(){
   const r=await fetch("https://api.github.com/repos/"+GH.repo+"/contents/"+GH.path+"?ref="+GH.branch+"&ts="+Date.now(),
     {headers:{Authorization:"Bearer "+ghTok,Accept:"application/vnd.github+json"}});
   if(r.status===404){ghSha=null;return{};}
-  if(!r.ok)throw new Error("GET "+r.status);
+  if(r.status===401)throw new Error("码无效401");if(r.status===403)throw new Error("被拒403");if(!r.ok)throw new Error("读取"+r.status);
   const j=await r.json();ghSha=j.sha;
   try{return JSON.parse(b64d(j.content))||{}}catch(e){return{}}
 }
@@ -350,7 +350,7 @@ async function ghSync(push){
       if(ok!==true){ if(mergeState(await ghGet())){lsSave();renderAll();} ok=await ghPut(); }
     }
     syncEl.textContent="● GitHub同步";syncEl.className="on";
-  }catch(e){syncEl.textContent="○ 同步失败（检查同步码）";syncEl.className="off";}
+  }catch(e){syncEl.textContent="○ 同步失败："+(e&&e.message||"网络");syncEl.className="off";}
   ghBusy=false;
 }
 function ghSchedule(){if(!ghTok||db)return;clearTimeout(ghT);ghT=setTimeout(()=>ghSync(true),2500);}
@@ -360,7 +360,7 @@ function ghStart(){
   clearInterval(ghTimer);ghTimer=setInterval(()=>ghSync(false),60000);
 }
 ti.value=ghTok;
-tb.onclick=()=>{ghTok=ti.value.trim();try{localStorage.setItem("lg20-ghtok",ghTok)}catch(e){}
+tb.onclick=()=>{ghTok=ti.value.replace(/\s+/g,"");ti.value=ghTok;try{localStorage.setItem("lg20-ghtok",ghTok)}catch(e){}
   if(ghTok)ghStart();else{clearInterval(ghTimer);syncEl.textContent="○ 本地模式";syncEl.className="off";}};
 
 /* ---------- boot ---------- */
